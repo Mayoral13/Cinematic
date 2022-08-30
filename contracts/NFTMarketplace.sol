@@ -13,7 +13,7 @@ contract Marketplace is Ownable,ReentrancyGuard{
     using SafeMath for uint;
     
     
-    uint256 private Fee;
+    uint256 public Fee;
    
     constructor(uint256 _fee){
         require(_fee <= 100,"Fee cannot be greater than 10%");
@@ -143,7 +143,7 @@ contract Marketplace is Ownable,ReentrancyGuard{
     }
     function CancelAuction(address _nft,uint _tokenID)external isAuctioned(_nft,_tokenID){
         require(msg.sender == auctions[_nft][_tokenID].creator,"Not Creator");
-        require(block.timestamp > auctions[_nft][_tokenID].end,"Must end");
+        require(block.timestamp < auctions[_nft][_tokenID].start,"Started");
         IERC721 nft = IERC721(_nft);
         nft.transferFrom(address(this),msg.sender,_tokenID);
         auctioned[_nft][_tokenID] = false;
