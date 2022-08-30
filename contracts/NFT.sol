@@ -36,7 +36,6 @@ contract NFT is ERC721,ERC721URIStorage{
    _tokenID.increment();
    uint256 id = _tokenID.current();
    _safeMint(msg.sender,id);
-   _setApprovalForAll(msg.sender,Marketplace,true);
    _setTokenURI(id,_tokenURI);
    tokenIDs[msg.sender].push(id);
    emit Minted(msg.sender,id);

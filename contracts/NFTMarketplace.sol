@@ -25,8 +25,6 @@ contract Marketplace is Ownable,ReentrancyGuard{
         uint price;
         uint tokenID;
         address seller;
-        address buyer;
-        bool sold;
     }
   
       struct Auction{
@@ -110,9 +108,8 @@ contract Marketplace is Ownable,ReentrancyGuard{
       emit AuctionCreated(msg.sender, _nft, _tokenID,_bid);
     }
     function BuyNFT(address _nft,uint _tokenID)external payable nonReentrant isListed(_nft,_tokenID){ 
-        require(msg.sender != listNFT[_nft][_tokenID].seller,"Cannot be selher");
+        require(msg.sender != listNFT[_nft][_tokenID].seller,"Cannot be seller");
         require(msg.value >= listNFT[_nft][_tokenID].price,"Price greater equal");
-        require(listNFT[_nft][_tokenID].sold == false,"Sold");
         INFT nft = INFT(listNFT[_nft][_tokenID].NFTAddr);
         uint256 Total = listNFT[_nft][_tokenID].price;
         uint256 royalty = nft.RoyaltyFee();
@@ -127,14 +124,12 @@ contract Marketplace is Ownable,ReentrancyGuard{
         sellershare = Total.sub(CalculateMarketFee(listNFT[_nft][_tokenID].price));
         payable(lister).transfer(sellershare);
         IERC721(listNFT[_nft][_tokenID].NFTAddr).safeTransferFrom(address(this),msg.sender,listNFT[_nft][_tokenID].tokenID);
-        listNFT[_nft][_tokenID].buyer = msg.sender;
-        listNFT[_nft][_tokenID].sold = true;
+        delete listNFT[_nft][_tokenID];
         listed[_nft][_tokenID] = false;
         emit NFTBought(msg.sender,_nft,_tokenID,msg.value);
     }
     function CancelListing(address _nft,uint _tokenID)external isListed(_nft,_tokenID){
       require(msg.sender == listNFT[_nft][_tokenID].seller,"Not seller");
-      require(listNFT[_nft][_tokenID].sold == false,"Sold");
       IERC721 nft = IERC721(_nft);
       nft.safeTransferFrom(address(this),msg.sender,_tokenID);
       listed[_nft][_tokenID] = false;
@@ -143,7 +138,8 @@ contract Marketplace is Ownable,ReentrancyGuard{
     }
     function CancelAuction(address _nft,uint _tokenID)external isAuctioned(_nft,_tokenID){
         require(msg.sender == auctions[_nft][_tokenID].creator,"Not Creator");
-        require(block.timestamp < auctions[_nft][_tokenID].start,"Started");
+        require(auctions[_nft][_tokenID].highestbid == 0,"Bid started");
+        require(auctions[_nft][_tokenID].lastBidder == address(0),"Active Bidder");
         IERC721 nft = IERC721(_nft);
         nft.transferFrom(address(this),msg.sender,_tokenID);
         auctioned[_nft][_tokenID] = false;
@@ -152,7 +148,7 @@ contract Marketplace is Ownable,ReentrancyGuard{
     }
     function Bid(address _nft,uint _tokenID)external payable nonReentrant isAuctioned(_nft,_tokenID){
         require(msg.sender != auctions[_nft][_tokenID].creator,"Not Creator");
-        require(msg.value >=  auctions[_nft][_tokenID].highestbid,"Not high");
+        require(msg.value >  auctions[_nft][_tokenID].highestbid,"Not high");
         require(block.timestamp < auctions[_nft][_tokenID].end,"ENDED");
         require(block.timestamp > auctions[_nft][_tokenID].start,"NOT START");
         if(auctions[_nft][_tokenID].lastBidder != address(0)){
@@ -186,6 +182,7 @@ contract Marketplace is Ownable,ReentrancyGuard{
         IERC721(auctions[_nft][_tokenID].nft).safeTransferFrom(address(this),msg.sender,auctions[_nft][_tokenID].tokenID);
         auctions[_nft][_tokenID].lastBidder = msg.sender;
         auctioned[_nft][_tokenID] = false;
+        delete auctions[_nft][_tokenID];
         emit NFTClaimed(msg.sender,_nft,_tokenID);
     }
       function SearchListing(address _nft,uint _tokenID)public view returns(ListNFT memory){
@@ -195,6 +192,7 @@ contract Marketplace is Ownable,ReentrancyGuard{
         return auctions[_nft][_tokenID];    
     }
     function Withdraw(address payable _to,uint _amount)external onlyOwner{
+        require(_amount <= address(this).balance);
         _to.transfer(_amount);
         emit Withdrawn(msg.sender,_to, _amount);
     }
@@ -204,6 +202,10 @@ contract Marketplace is Ownable,ReentrancyGuard{
     }
     function CalculateMarketFee(uint _price)public view returns(uint256){
         return (Fee.mul(_price)).div(1000);
+    }
+  
+    receive()external payable{
+
     }
 
 }
