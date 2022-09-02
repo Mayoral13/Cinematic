@@ -82,7 +82,7 @@ contract Marketplace is Ownable,ReentrancyGuard{
     
     function CreateListing(address _nft,uint _price,uint _tokenID)external isNotListed(_nft,_tokenID) isNotAuctioned(_nft,_tokenID){
         IERC721 nft = IERC721(_nft);
-        require(_price != 0,"Price not 0");
+        require(_price != 0);
         listed[_nft][_tokenID] = true;
         nft.transferFrom(msg.sender,address(this),_tokenID);
         listNFT[_nft][_tokenID].NFTAddr = _nft;
@@ -95,8 +95,8 @@ contract Marketplace is Ownable,ReentrancyGuard{
     function CreateAuction(address _nft,uint _bid,uint _tokenID,uint _start,uint _end) isNotListed(_nft,_tokenID) isNotAuctioned(_nft,_tokenID)external{
       IERC721 nft = IERC721(_nft);
       nft.transferFrom(msg.sender,address(this),_tokenID);
-      require(_bid != 0,"Cannot be 0");
-      require(_end > _start,"Must be greater");
+      require(_bid != 0);
+      require(_end > _start);
       auctioned[_nft][_tokenID] = true;
       auctions[_nft][_tokenID].creator = payable(msg.sender);
       auctions[_nft][_tokenID].nft = _nft;
@@ -108,8 +108,8 @@ contract Marketplace is Ownable,ReentrancyGuard{
       emit AuctionCreated(msg.sender, _nft, _tokenID,_bid);
     }
     function BuyNFT(address _nft,uint _tokenID)external payable nonReentrant isListed(_nft,_tokenID){ 
-        require(msg.sender != listNFT[_nft][_tokenID].seller,"Cannot be seller");
-        require(msg.value >= listNFT[_nft][_tokenID].price,"Price greater equal");
+        require(msg.sender != listNFT[_nft][_tokenID].seller);
+        require(msg.value >= listNFT[_nft][_tokenID].price);
         INFT nft = INFT(listNFT[_nft][_tokenID].NFTAddr);
         uint256 Total = listNFT[_nft][_tokenID].price;
         uint256 royalty = nft.RoyaltyFee();
@@ -129,7 +129,7 @@ contract Marketplace is Ownable,ReentrancyGuard{
         emit NFTBought(msg.sender,_nft,_tokenID,msg.value);
     }
     function CancelListing(address _nft,uint _tokenID)external isListed(_nft,_tokenID){
-      require(msg.sender == listNFT[_nft][_tokenID].seller,"Not seller");
+      require(msg.sender == listNFT[_nft][_tokenID].seller);
       IERC721 nft = IERC721(_nft);
       nft.safeTransferFrom(address(this),msg.sender,_tokenID);
       listed[_nft][_tokenID] = false;
@@ -137,9 +137,9 @@ contract Marketplace is Ownable,ReentrancyGuard{
       emit ListingCanceled(msg.sender,_nft,_tokenID); 
     }
     function CancelAuction(address _nft,uint _tokenID)external isAuctioned(_nft,_tokenID){
-        require(msg.sender == auctions[_nft][_tokenID].creator,"Not Creator");
-        require(auctions[_nft][_tokenID].highestbid == 0,"Bid started");
-        require(auctions[_nft][_tokenID].lastBidder == address(0),"Active Bidder");
+        require(msg.sender == auctions[_nft][_tokenID].creator);
+        require(auctions[_nft][_tokenID].highestbid == 0);
+        require(auctions[_nft][_tokenID].lastBidder == address(0));
         IERC721 nft = IERC721(_nft);
         nft.transferFrom(address(this),msg.sender,_tokenID);
         auctioned[_nft][_tokenID] = false;
@@ -147,10 +147,10 @@ contract Marketplace is Ownable,ReentrancyGuard{
         emit AuctionCanceled(msg.sender,_nft,_tokenID);
     }
     function Bid(address _nft,uint _tokenID)external payable nonReentrant isAuctioned(_nft,_tokenID){
-        require(msg.sender != auctions[_nft][_tokenID].creator,"Not Creator");
-        require(msg.value >  auctions[_nft][_tokenID].highestbid,"Not high");
-        require(block.timestamp < auctions[_nft][_tokenID].end,"ENDED");
-        require(block.timestamp > auctions[_nft][_tokenID].start,"NOT START");
+        require(msg.sender != auctions[_nft][_tokenID].creator);
+        require(msg.value >  auctions[_nft][_tokenID].highestbid);
+        require(block.timestamp < auctions[_nft][_tokenID].end);
+        require(block.timestamp > auctions[_nft][_tokenID].start);
         if(auctions[_nft][_tokenID].lastBidder != address(0)){
             payable(auctions[_nft][_tokenID].lastBidder).transfer(auctions[_nft][_tokenID].highestbid);
         }
@@ -159,13 +159,13 @@ contract Marketplace is Ownable,ReentrancyGuard{
         emit Bidding(msg.sender,_nft,_tokenID,msg.value);
     }
     function ViewHighestBid(address _nft,uint _tokenID) public view returns(uint){
-         require(block.timestamp > auctions[_nft][_tokenID].start,"Not START");
-         require(auctions[_nft][_tokenID].startingbid != 0,"Not exist");
+         require(block.timestamp > auctions[_nft][_tokenID].start);
+         require(auctions[_nft][_tokenID].startingbid != 0);
          return auctions[_nft][_tokenID].highestbid;
          }
     function ClaimNFT(address _nft,uint _tokenID)nonReentrant external{
-        require(block.timestamp > auctions[_nft][_tokenID].end,"NOT ENDED");
-        require(msg.sender == auctions[_nft][_tokenID].lastBidder,"NOT WINNER");
+        require(block.timestamp > auctions[_nft][_tokenID].end);
+        require(msg.sender == auctions[_nft][_tokenID].lastBidder);
         INFT nft = INFT(auctions[_nft][_tokenID].nft);
         uint256 Total = auctions[_nft][_tokenID].highestbid;
         uint256 royalty = nft.RoyaltyFee();

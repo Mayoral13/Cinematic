@@ -1,15 +1,13 @@
-const Factory = artifacts.require("NFTFactory")
-const Market = artifacts.require("Marketplace");
-const NFT = artifacts.require("NFT");
+const CMATIC = artifacts.require("CMatic");
+const Stake = artifacts.require("Staking");
 
 module.exports = async (deployer) =>{
-await deployer.deploy(Factory);
-const factoryaddress = Factory.address;
-console.log("The Factory address is : ",factoryaddress.toString());
-await deployer.deploy(Market,50);
-const marketaddress = Market.address;
-console.log("The Market address is : ",marketaddress.toString());
-await deployer.deploy(NFT,marketaddress,"TRIAL","TT",50,marketaddress);
-/// CONTINUE READING AND WRITING FUNCTIONS
+await deployer.deploy(CMATIC,"CINEMATIC","CMATIC",50000000);
+const CmaticAddress = CMATIC.address;
+console.log("Cinematic address is: ",CmaticAddress.toString());
+await deployer.deploy(Stake,CmaticAddress);
+const StakeAddress = Stake.address;
+console.log("Staking Address is: ",StakeAddress.toString());
+let matic = await CMATIC.deployed();
 };
 
